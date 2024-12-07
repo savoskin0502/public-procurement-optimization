@@ -24,9 +24,17 @@ class HTTPProvider:
         return session
 
     @retry(
+        Exception,
         aiohttp.ClientResponseError,
         aiohttp.ClientConnectionError,
         asyncio.TimeoutError,
+        aiohttp.client_exceptions.ServerDisconnectedError,
+        asyncio.exceptions.CancelledError,
+        asyncio.exceptions.TimeoutError,
+        aiohttp.ClientResponseError,
+        aiohttp.ClientConnectionError,
+        asyncio.TimeoutError,
+        TimeoutError,
         attempts=7,
         delay=6,
         backoff=3,
@@ -44,11 +52,24 @@ class HTTPProvider:
                 return await res.json()
         except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
             print(e)
-            raise e
+            raise Exception(str(e))
 
+    @retry(
+        Exception,
+        attempts=7,
+        delay=6,
+        backoff=3,
+    )
     async def get(self, url, **conf):
         return await self._request("GET", url, **conf)
 
+    @retry(
+        Exception,
+        TimeoutError,
+        attempts=7,
+        delay=6,
+        backoff=3,
+    )
     async def post(self, url, **conf):
         return await self._request("POST", url, **conf)
 
