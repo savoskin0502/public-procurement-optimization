@@ -14,3 +14,7 @@ venv: $(VENV_BINARY)/activate
 
 run:
 	@$(VENV_BINARY)/python ./parser/src/parse_applications.py
+
+
+parse-lots:
+	@$(VENV_BINARY)/python ./parser/src/parse_lots.py
