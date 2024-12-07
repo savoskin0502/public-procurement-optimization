@@ -1,3 +1,4 @@
+import csv
 import functools
 import logging
 import time
@@ -36,3 +37,10 @@ def retry(*exceptions, attempts: int, delay: int, backoff: int):
         return wrapper
 
     return decorated
+
+
+def iter_rows(fpath, delimiter=';') -> dict:
+    with open(fpath, mode="r", encoding="utf8") as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=delimiter, quotechar='"')
+        for row in reader:
+            yield row
