@@ -1,12 +1,8 @@
-import logging
-import time
-
+import asyncio
 from parser.src.utils import retry
 
 import aiohttp
-import asyncio
 
-# logger = logging.getLogger(__name__)
 
 class HTTPProvider:
     def __init__(self, **session_conf):
@@ -31,9 +27,6 @@ class HTTPProvider:
         aiohttp.client_exceptions.ServerDisconnectedError,
         asyncio.exceptions.CancelledError,
         asyncio.exceptions.TimeoutError,
-        aiohttp.ClientResponseError,
-        aiohttp.ClientConnectionError,
-        asyncio.TimeoutError,
         TimeoutError,
         attempts=7,
         delay=6,
@@ -54,22 +47,9 @@ class HTTPProvider:
             print(e)
             raise Exception(str(e))
 
-    @retry(
-        Exception,
-        attempts=7,
-        delay=6,
-        backoff=3,
-    )
     async def get(self, url, **conf):
         return await self._request("GET", url, **conf)
 
-    @retry(
-        Exception,
-        TimeoutError,
-        attempts=7,
-        delay=6,
-        backoff=3,
-    )
     async def post(self, url, **conf):
         return await self._request("POST", url, **conf)
 
@@ -107,7 +87,6 @@ class GoszakupProvider:
 
     async def parse_graphql(self, query: str, sort_key: str, after: int = 0):
         running = True
-        # after = 0
 
         while running:
             print("current `after` {}".format(after))
