@@ -1,9 +1,10 @@
+import asyncio
 import csv
 import functools
 import logging
-import time
 
 logger = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
 
 
 def retry(*exceptions, attempts: int, delay: int, backoff: int):
@@ -18,21 +19,22 @@ def retry(*exceptions, attempts: int, delay: int, backoff: int):
 
     def decorated(func):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             _delay, _backoff = delay - backoff, backoff
             _attempts = attempts - 1
 
             for _ in range(_attempts):
                 try:
-                    result = func(*args, **kwargs)
+                    result = await func(*args, **kwargs)
                 except exceptions as err:
-                    logger.error(err)
+                    logger.debug(err)
+                    logger.debug(type(err))
                     logger.debug(kwargs)
                     _delay += _backoff
-                    time.sleep(_delay)
+                    await asyncio.sleep(_delay)
                 else:
                     return result
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
