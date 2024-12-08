@@ -12,9 +12,13 @@ $(VENV_BINARY)/activate: requirements.txt .EXPORT_ALL_VARIABLES
 venv: $(VENV_BINARY)/activate
 
 
-run:
+parse-applications:
 	@$(VENV_BINARY)/python ./parser/src/parse_applications.py
 
 
 parse-lots:
 	@$(VENV_BINARY)/python ./parser/src/parse_lots.py
+
+
+parse-ads:
+	@$(VENV_BINARY)/python ./parser/src/parse_advertisements.py
