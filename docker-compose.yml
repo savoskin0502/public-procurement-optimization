@@ -1,0 +1,20 @@
+x-db-env-variables: &x-db-env-variables
+  POSTGRES_DB: procdb
+  POSTGRES_USER: user
+  POSTGRES_PASSWORD: pass
+  PGOPTIONS: "-c max_wal_size=1GB"
+
+
+services:
+  db-local:
+    image: postgres:13.9-alpine3.17
+    container_name: public-procurement-db-local
+    ports:
+      - "5432:5432"
+    environment: *x-db-env-variables
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    driver: local
