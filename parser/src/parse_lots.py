@@ -1,10 +1,7 @@
 import asyncio
 import csv
-import itertools
-
 import parser.src.provider as provider
 from parser.src.app_settings import get_settings
-
 
 QUERY = """
 query getLots($after: Int){
