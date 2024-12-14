@@ -1,5 +1,6 @@
 select count(1) from lot_winner;
 
+create table dataset as
 with tmp as (
     select
         lw.advertisement_id
@@ -60,3 +61,13 @@ with tmp as (
         ON lw.advertisement_id = ga.advertisement_id
 )
 select * from tmp;
+
+
+-- не все закупки были успешно завершены, от части из них отказались/часть не состоялась, поэтому мы взяли только те закупки которые были успешно завершены
+-- т.е те по которым все состоялось
+-- create table dataset_v1 as
+select * from dataset
+where
+    advertisement_status_id = 350
+    and ad_start_date >= to_date('2020-01-01', 'YYYY-MM-DD');
+

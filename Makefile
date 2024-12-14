@@ -22,3 +22,7 @@ parse-lots:
 
 parse-ads:
 	@$(VENV_BINARY)/python ./parser/src/parse_advertisements.py
+
+
+parse-participants:
+	@$(VENV_BINARY)/python ./parser/src/parse_participant.py
