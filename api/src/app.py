@@ -1,6 +1,10 @@
 import locale
 import os
 import time
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from api.src.provider import GoszakupProvider
 
 import pandas as pd
