@@ -1,5 +1,5 @@
 import asyncio
-from parser.src.utils import retry
+from api.src.utils import retry
 
 import aiohttp
 
