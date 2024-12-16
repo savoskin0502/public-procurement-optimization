@@ -59,6 +59,7 @@ def handle_search(query):
 
     st.markdown(
         """
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
         .limited-table {
             width: 100%;
@@ -76,7 +77,17 @@ def handle_search(query):
         .limited-table tr:last-child td{
             background-color: #d4f7d4; /* Light green for the last row */
         }
-
+        @media screen and (max-width: 600px) {
+            .limited-table {
+                min-width: 100%;
+            }
+            .limited-table td {
+                max-width: 100%;
+                min-width: auto;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -115,5 +126,3 @@ if predefined_lot:
     handle_search(predefined_lot)
 elif search_lot_query:
     handle_search(search_lot_query)
-
-
