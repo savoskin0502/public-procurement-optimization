@@ -1,7 +1,7 @@
 import locale
 import os
 import time
-from parser.src.provider import GoszakupProvider
+from api.src.provider import GoszakupProvider
 
 import pandas as pd
 import streamlit as st
