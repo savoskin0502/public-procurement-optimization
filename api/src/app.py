@@ -1,4 +1,3 @@
-import locale
 import os
 import time
 import sys
@@ -10,10 +9,6 @@ from api.src.provider import GoszakupProvider
 import pandas as pd
 import streamlit as st
 
-try:
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-except locale.Error:
-    locale.setlocale(locale.LC_ALL, 'C.UTF-8')
 provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
@@ -55,7 +50,7 @@ def handle_search(query):
         'Lot Number': ["72915351-ЗЦПнеГЗ3"],
         'Lot Name': ["Промывалка"],
         'Description': ["Бутыль-промывалка 250 мл"],
-        "Recommended Price": [locale.currency(21_200, grouping=True).replace("$", "₸")]
+        "Recommended Price": [f"${21_200:,.2f}".replace("$", "₸")]
     })
 
     vertical_data = data.T
