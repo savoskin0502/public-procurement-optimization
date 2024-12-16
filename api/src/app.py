@@ -10,8 +10,10 @@ from api.src.provider import GoszakupProvider
 import pandas as pd
 import streamlit as st
 
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
