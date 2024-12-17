@@ -45,7 +45,8 @@ with t_first_winner as (
           END as total_price_wdiscount
         , row_number() over (partition by supplier_id, lot_id order by prot_id desc) as row_num
     from goszakup_supplier_application_lot gl
-    where application_lot_status_id != 360 and date_apply >= to_date('2020-01-01', 'YYYY-MM-DD')
+    where application_lot_status_id != 360 and date_apply >= to_date('2020-01-01', 'YYYY-MM-DD') and application_lot_status_id != 310
+    -- 310 - Отклонена заявка на участие
 ), second_winner as (
     select
         advertisement_id
