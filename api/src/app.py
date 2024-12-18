@@ -2,6 +2,9 @@ import os
 import time
 import sys
 
+import numpy as np
+import xgboost as xgb
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from api.src.provider import GoszakupProvider
@@ -12,11 +15,25 @@ import streamlit as st
 provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
+print(os.listdir())
+
+# with open("linear_regression_model_v1.pkl", "rb") as file:
+#     loaded_model = pickle.load(file)
+
+loaded_model = xgb.Booster()
+loaded_model.load_model("xgb_model.json")
 
 
 def handle_search(query):
     result_message = st.empty()
     result_df = st.empty()
+
+    input_row = {
+        "total_amount": 10_000
+    }
+
+    dmatrix_input = xgb.DMatrix(pd.DataFrame([{"total_amount": np.log2(10_000)}]))
+    predictions = loaded_model.predict(dmatrix_input)
 
     if not query.strip():
         st.warning("Please enter a search query.")
@@ -50,7 +67,7 @@ def handle_search(query):
         'Lot Number': ["72915351-ЗЦПнеГЗ3"],
         'Lot Name': ["Промывалка"],
         'Description': ["Бутыль-промывалка 250 мл"],
-        "Recommended Price": [f"${21_200:,.2f}".replace("$", "₸")]
+        "Recommended Price": [f"${np.power(2, predictions[0]):,.2f}".replace("$", "₸")]
     })
 
     vertical_data = data.T
