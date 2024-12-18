@@ -13,10 +13,19 @@ from api.src.provider import GoszakupProvider
 import pandas as pd
 import streamlit as st
 
+
+def thompson_sampling_bandit(n_arms, successes, failures):
+    sampled_values = [np.random.beta(successes[i] + 1, failures[i] + 1) for i in range(n_arms)]
+    return np.argmax(sampled_values)
+
+
 provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
 
+pricing_strategies = [0.90, 0.95, 1.0, 1.05]
+successes = [3993, 36798, 59183, 6]
+failures = [20, 0, 0, 0]
 
 loaded_model = xgb.Booster()
 loaded_model.load_model("xgb_model.json")
@@ -52,7 +61,6 @@ def handle_search(query):
     progress_bar = st.progress(0)
 
     progress_text.write("Step 1: Searching lots...")
-    # time.sleep(0.1)
     progress_bar.progress(50)
 
     try:
@@ -82,6 +90,9 @@ def handle_search(query):
     )
     predictions = loaded_model.predict(dmatrix_input)
 
+    chosen_arm = thompson_sampling_bandit(len(pricing_strategies), successes, failures)
+    adjusted_prediction = predictions[0] * pricing_strategies[chosen_arm]
+    print(pricing_strategies[chosen_arm], predictions[0])
     if not query.strip():
         st.warning("Please enter a search query.")
         return
@@ -110,7 +121,8 @@ def handle_search(query):
         "Initial Lot Price": [f"${input_row["total_amount"]:,.2f}".replace("$", "₸")],
         "Recommended Price": [
             f"${min(np.power(2, predictions[0]), input_row["total_amount"]):,.2f}".replace("$", "₸")
-        ]
+        ],
+        "Adjusted Price": [f"${np.power(2, adjusted_prediction):,.2f}".replace("$", "₸")]
     })
 
     vertical_data = data.T
