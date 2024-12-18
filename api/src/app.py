@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 import sys
@@ -15,48 +16,87 @@ import streamlit as st
 provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
-print(os.listdir())
 
-# with open("linear_regression_model_v1.pkl", "rb") as file:
-#     loaded_model = pickle.load(file)
 
 loaded_model = xgb.Booster()
 loaded_model.load_model("xgb_model.json")
 
 
+LOT_SEARCH_QUERY = """
+query getLots($after: Int, $lotNumber: String){
+    items: Lots(limit: 200, after: $after, filter: {lotNumber: $lotNumber}){
+        lotId: id
+        , lotNumber
+        , lotName: nameRu
+        , lotDescription: descriptionRu
+        , total_amount: amount
+    }
+}
+"""
+
+
 def handle_search(query):
+    async def fetch_data():
+        result = await provider.execute(
+            url=provider.graphql_url,
+            query=LOT_SEARCH_QUERY,
+            headers=provider._headers,
+            variables={"after": 0, "lotNumber": query},
+        )
+        return result["data"]["items"]
+
     result_message = st.empty()
     result_df = st.empty()
 
-    input_row = {
-        "total_amount": 10_000
-    }
+    progress_text = st.empty()
+    progress_bar = st.progress(0)
 
-    dmatrix_input = xgb.DMatrix(pd.DataFrame([{"total_amount": np.log2(10_000)}]))
+    progress_text.write("Step 1: Searching lots...")
+    # time.sleep(0.1)
+    progress_bar.progress(50)
+
+    try:
+        response = asyncio.get_event_loop().run_until_complete(fetch_data())
+    except RuntimeError:
+        response = asyncio.run(fetch_data())
+
+    if response is None:
+        progress_bar.empty()
+        progress_text.empty()
+        result_message.warning("Lot with such number was not found")
+        return
+
+    input_row = response[0]
+
+    progress_text.write("Step 2: Making predictions...")
+    progress_bar.progress(100)
+
+    dmatrix_input = xgb.DMatrix(
+        pd.DataFrame(
+            [
+                {
+                    "total_amount": np.log2(input_row["total_amount"])
+                }
+            ]
+        )
+    )
     predictions = loaded_model.predict(dmatrix_input)
 
     if not query.strip():
         st.warning("Please enter a search query.")
         return
 
-    progress_text = st.empty()
-    progress_bar = st.progress(0)
-
-    progress_text.write("Step 1: Searching lots...")
-    time.sleep(0.1)
-    progress_bar.progress(25)
-
-    progress_text.write("Step 2: Collecting information about customer...")
-    time.sleep(0.1)
-    progress_bar.progress(50)
-
-    progress_text.write("Step 3: Collecting information about advertisement...")
-    time.sleep(0.1)
-    progress_bar.progress(75)
-
-    progress_text.write("Step 4: Making predictions...")
-    time.sleep(0.1)
-    progress_bar.progress(100)
+    # progress_text.write("Step 2: Collecting information about customer...")
+    # time.sleep(0.1)
+    # progress_bar.progress(50)
+    #
+    # progress_text.write("Step 3: Collecting information about advertisement...")
+    # time.sleep(0.1)
+    # progress_bar.progress(75)
+    #
+    # progress_text.write("Step 4: Making predictions...")
+    # time.sleep(0.1)
+    # progress_bar.progress(100)
 
     progress_text.empty()
     progress_bar.empty()
@@ -64,10 +104,13 @@ def handle_search(query):
     result_message.success(f"Search results for lot number `{query}`")
 
     data = pd.DataFrame({
-        'Lot Number': ["72915351-ЗЦПнеГЗ3"],
-        'Lot Name': ["Промывалка"],
-        'Description': ["Бутыль-промывалка 250 мл"],
-        "Recommended Price": [f"${np.power(2, predictions[0]):,.2f}".replace("$", "₸")]
+        'Lot Number': [input_row["lotNumber"]],
+        'Lot Name': [input_row["lotName"]],
+        'Description': [input_row["lotDescription"]],
+        "Initial Lot Price": [f"${input_row["total_amount"]:,.2f}".replace("$", "₸")],
+        "Recommended Price": [
+            f"${min(np.power(2, predictions[0]), input_row["total_amount"]):,.2f}".replace("$", "₸")
+        ]
     })
 
     vertical_data = data.T

@@ -67,6 +67,19 @@ class GoszakupProvider:
             "Authorization": f"Bearer {token}",
         }
 
+    @retry(
+        Exception,
+        aiohttp.ClientResponseError,
+        aiohttp.ClientConnectionError,
+        asyncio.TimeoutError,
+        aiohttp.client_exceptions.ServerDisconnectedError,
+        asyncio.exceptions.CancelledError,
+        asyncio.exceptions.TimeoutError,
+        TimeoutError,
+        attempts=7,
+        delay=6,
+        backoff=3,
+    )
     async def execute(
         self,
         url: str,
