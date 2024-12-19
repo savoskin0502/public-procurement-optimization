@@ -1,6 +1,6 @@
 import asyncio
+import datetime
 import os
-import time
 import sys
 
 import numpy as np
@@ -23,12 +23,20 @@ provider = GoszakupProvider(os.environ["GOSZAKUP_TOKEN"])
 
 st.title("Win More Tenders with Price Recommendations")
 
-pricing_strategies = [0.90, 0.95, 1.0, 1.05]
-successes = [3993, 36798, 59183, 6]
-failures = [20, 0, 0, 0]
+pricing_strategies = [0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0]
+successes = [
+    np.float64(1979.8184866891775),
+    np.float64(1908.261819632896),
+    np.float64(2119.9299452984737),
+    np.float64(2074.3453225191824),
+    np.float64(2177.133351210614),
+    np.float64(2120.759620531656),
+    np.float64(34695.66953559128)
+]
+failures = [56831, 129, 160, 171, 199, 169, 90929]
 
 loaded_model = xgb.Booster()
-loaded_model.load_model("xgb_model.json")
+loaded_model.load_model("xgb_model_v2.json")
 
 
 LOT_SEARCH_QUERY = """
@@ -39,6 +47,15 @@ query getLots($after: Int, $lotNumber: String){
         , lotName: nameRu
         , lotDescription: descriptionRu
         , total_amount: amount
+        , ad: TrdBuy {
+            subjectType: RefSubjectType {
+                subjectTypeId: id
+            }
+            startDate
+            repeatStartDate
+            endDate
+            repeatEndDate
+        }
     }
 }
 """
@@ -61,7 +78,7 @@ def handle_search(query):
     progress_bar = st.progress(0)
 
     progress_text.write("Step 1: Searching lots...")
-    progress_bar.progress(50)
+    progress_bar.progress(33)
 
     try:
         response = asyncio.get_event_loop().run_until_complete(fetch_data())
@@ -77,37 +94,35 @@ def handle_search(query):
     input_row = response[0]
 
     progress_text.write("Step 2: Making predictions...")
-    progress_bar.progress(100)
+    progress_bar.progress(66)
 
     dmatrix_input = xgb.DMatrix(
         pd.DataFrame(
             [
                 {
-                    "total_amount": np.log2(input_row["total_amount"])
+                    "total_amount": np.log2(input_row["total_amount"]),
+                    "ad_duration_power": (
+                            datetime.datetime.strptime(input_row["ad"]["endDate"], "%Y-%m-%d %H:%M:%S")
+                            - datetime.datetime.strptime(input_row["ad"]["startDate"], "%Y-%m-%d %H:%M:%S")
+                    ).days,
+                    "is_subject_type_work": input_row["ad"]["subjectType"]["subjectTypeId"] == 2,
+                    "is_subject_type_service": input_row["ad"]["subjectType"]["subjectTypeId"] == 3,
                 }
             ]
         )
     )
     predictions = loaded_model.predict(dmatrix_input)
 
+    progress_text.write("Step 3: Adjusting predictions...")
+    progress_bar.progress(100)
+
     chosen_arm = thompson_sampling_bandit(len(pricing_strategies), successes, failures)
-    adjusted_prediction = predictions[0] * pricing_strategies[chosen_arm]
+    adjusted_prediction = np.power(2, predictions[0]) * pricing_strategies[chosen_arm]
     print(pricing_strategies[chosen_arm], predictions[0])
+
     if not query.strip():
         st.warning("Please enter a search query.")
         return
-
-    # progress_text.write("Step 2: Collecting information about customer...")
-    # time.sleep(0.1)
-    # progress_bar.progress(50)
-    #
-    # progress_text.write("Step 3: Collecting information about advertisement...")
-    # time.sleep(0.1)
-    # progress_bar.progress(75)
-    #
-    # progress_text.write("Step 4: Making predictions...")
-    # time.sleep(0.1)
-    # progress_bar.progress(100)
 
     progress_text.empty()
     progress_bar.empty()
@@ -115,14 +130,18 @@ def handle_search(query):
     result_message.success(f"Search results for lot number `{query}`")
 
     data = pd.DataFrame({
-        'Lot Number': [input_row["lotNumber"]],
-        'Lot Name': [input_row["lotName"]],
-        'Description': [input_row["lotDescription"]],
+        "Lot Number": [input_row["lotNumber"]],
+        "Lot Name": [input_row["lotName"]],
+        "Description": [input_row["lotDescription"]],
+        "Tender Start Date": [input_row["ad"]["startDate"]],
+        "Tender End Date": [input_row["ad"]["endDate"]],
         "Initial Lot Price": [f"${input_row["total_amount"]:,.2f}".replace("$", "₸")],
         "Recommended Price": [
             f"${min(np.power(2, predictions[0]), input_row["total_amount"]):,.2f}".replace("$", "₸")
         ],
-        "Adjusted Price": [f"${np.power(2, adjusted_prediction):,.2f}".replace("$", "₸")]
+        "Price to Increase Winning Chances": [
+            f"${adjusted_prediction:,.2f}".replace("$", "₸")
+        ]
     })
 
     vertical_data = data.T
